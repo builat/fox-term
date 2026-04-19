@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "models/Messages.h"
-
+#include "models/TransportMessage.h"
 const int MAX_MESSAGES = 10;
 
 struct Message
@@ -41,7 +41,7 @@ struct DeviceState
     int selectedMessageIndex;
     int selectedSettingIndex;
 
-    OutgoingMessage draftMessage;
+    TransportMessage draftMessage;
 
     String lastTransportStatus;
     int nextMessageSeq;

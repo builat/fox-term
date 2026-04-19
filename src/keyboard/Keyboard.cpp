@@ -17,11 +17,6 @@ KeyEvent Keyboard::read()
   }
 
   int8_t c = (int8_t)Wire.read();
-  // if (c != 0)
-  // {
-  //   Serial.print("Received key: ");
-  //   Serial.println(c, HEX);
-  // }
 
   switch (c)
   {

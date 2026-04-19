@@ -2,7 +2,7 @@
 #include "views/app/App.h"
 #include "Config.h"
 #include "utils/IdGenerator.h"
-
+#include "protocol/MessageChunkCodec.h"
 void ComposeMessageView::onEnter(App &app)
 {
     selectedField = COMPOSE_TO;
@@ -39,7 +39,7 @@ void ComposeMessageView::moveDown()
 void ComposeMessageView::toggleCurrentField(App &app)
 {
     DeviceState &state = app.getState();
-    OutgoingMessage &msg = state.draftMessage;
+    TransportMessage &msg = state.draftMessage;
 
     switch (selectedField)
     {
@@ -63,26 +63,27 @@ void ComposeMessageView::toggleCurrentField(App &app)
 void ComposeMessageView::handleSend(App &app)
 {
     DeviceState &state = app.getState();
-    OutgoingMessage &msg = state.draftMessage;
 
-    if (msg.to.length() == 0 || msg.text.length() == 0)
+    if (state.draftMessage.to.length() == 0 || state.draftMessage.text.length() == 0)
     {
-        state.lastTransportStatus = "Compose: missing to/text";
+        state.lastTransportStatus = "Missing to/text";
         return;
     }
 
-    msg.id = IdGenerator::makeMessageId(state.deviceName, state.nextMessageSeq++);
+    TransportMessage msg;
+    msg.id = IdGenerator::makeMessageId(state.nextMessageSeq++);
     msg.from = state.deviceName;
-    msg.status = MSG_QUEUED;
+    msg.to = state.draftMessage.to;
+    msg.targetType = state.draftMessage.targetType;
+    msg.includeGps = state.draftMessage.includeGps;
+    msg.useEncryption = state.draftMessage.useEncryption;
+    msg.text = state.draftMessage.text;
+    msg.valid = true;
 
-    // SD will be inserted here later.
-    // For now send directly.
-    app.getDispatcher().dispatch(msg);
+    bool ok = app.getDispatcher().dispatch(msg);
+    state.lastTransportStatus = ok ? ("Queued/Sent: " + msg.id) : "Dispatch failed";
 
-    state.lastTransportStatus = "Queued/Sent: " + msg.id;
-
-    // reset draft
-    state.draftMessage = OutgoingMessage();
+    state.draftMessage = TransportMessage();
     state.draftMessage.from = state.deviceName;
     state.draftMessage.targetType = TARGET_DEVICE;
     state.draftMessage.useEncryption = false;
@@ -100,10 +101,11 @@ void ComposeMessageView::render(App &app)
 {
     Screen &screen = app.getScreen();
     DeviceState &state = app.getState();
-    OutgoingMessage &msg = state.draftMessage;
+    TransportMessage &msg = state.draftMessage;
 
     screen.clear();
     screen.printLine("== COMPOSE ==", WHITE);
+    screen.printLine("", WHITE);
 
     screen.printLine(String(selectedField == COMPOSE_TO ? "> " : "  ") +
                          "To: " + msg.to,
@@ -120,12 +122,14 @@ void ComposeMessageView::render(App &app)
     screen.printLine(String(selectedField == COMPOSE_GPS_TAG ? "> " : "  ") +
                          "GPS tag: " + String(msg.includeGps ? "ON" : "OFF"),
                      YELLOW);
-
+    screen.printLine("-------------------------------------------------------------------------------", GREEN);
     screen.printLine(String(selectedField == COMPOSE_TEXT ? "> " : "  ") +
                          "Text: " + msg.text,
                      GREEN);
 
     screen.printLine("", GREEN);
+    screen.setCursorY(180);
+    screen.printLine("-------------------------------------------------------------------------------", GREEN);
     screen.printLine(String(selectedField == COMPOSE_SEND ? "> " : "  ") + "Send", GREEN);
     screen.printLine(String(selectedField == COMPOSE_CANCEL ? "> " : "  ") + "Cancel", RED);
 }

@@ -4,11 +4,9 @@
 class IdGenerator
 {
 public:
-    static String makeMessageId(const String &deviceName, int seq)
+    static String makeMessageId(int seq)
     {
-        String out = deviceName;
-        out += "-";
-        out += String((unsigned long)millis());
+        String out = String((unsigned long)millis());
         out += "-";
         out += String(seq);
         return out;

@@ -40,7 +40,6 @@ void App::begin()
     state.draftMessage.useEncryption = false;
     state.draftMessage.includeGps = true;
     state.draftMessage.text = "";
-    state.draftMessage.status = MSG_DRAFT;
 
     state.lastTransportStatus = "IDLE";
     state.nextMessageSeq = 1;
@@ -119,4 +118,9 @@ DeviceState &App::getState()
 MessageDispatcher &App::getDispatcher()
 {
     return dispatcher;
+}
+void App::setHeltecConnected(bool connected)
+{
+    state.heltecConnected = connected;
+    screen.setRadioStatus(connected, state.lastRssi, state.lastSnr);
 }

@@ -1,5 +1,6 @@
 #include "views/home/Home.h"
 #include "views/app/App.h"
+#include "models/Models.h"
 #include "Config.h"
 
 void HomeView::onEnter(App &app)

@@ -4,45 +4,73 @@
 #include "views/app/App.h"
 #include "uart/UartLink.h"
 #include <SD.h>
-#include "protocol/MessageParser.h"
+#include "transport/MessageDispatcher.h"
 #include "transport/MessageReceiver.h"
+#include "protocol/MessageChunkCodec.h"
+#include "protocol/MessageParser.h"
+#include "protocol/MessageAssembler.h"
+#include "models/TransportMessage.h"
 
 Screen screen;
 Keyboard keyboard;
 UartLink uart;
+MessageReceiver receiver;
+MessageAssembler incomingAssembler;
+
 App app(screen, uart);
 
 unsigned long lastStatusRequestMs = 0;
-const unsigned long STATUS_INTERVAL_MS = 5000;
+const unsigned long STATUS_INTERVAL_MS = 60 * 1000;
 
 void processIncomingLine(const String &line)
 {
   DeviceState &state = app.getState();
 
-  Serial.println("[UART] " + line);
-
-  if (line.startsWith("RX:"))
+  // Serial.println("[UART] " + line);
+  if (line == "")
   {
-    String payload = line.substring(3);
-    IncomingMessage msg = MessageParser::parse(payload);
+    return;
+  }
 
-    if (!msg.valid)
+  if (line.startsWith("MSG|"))
+  {
+    MessageChunk chunk = MessageChunkCodec::decode(line);
+
+    if (!chunk.valid)
     {
-      state.lastTransportStatus = "RX parse failed";
+      state.lastTransportStatus = "Bad RX chunk";
       return;
     }
 
-    if (MessageReceiver::isForThisDevice(msg, state))
+    if (!incomingAssembler.addChunk(chunk))
     {
-      bool stored = MessageReceiver::storeToInbox(msg, state);
-      state.lastTransportStatus = stored ? "RX stored: " + msg.id
-                                         : "RX inbox full";
-    }
-    else
-    {
-      state.lastTransportStatus = "RX skipped: not for me";
+      state.lastTransportStatus = "RX assembly failed";
+      incomingAssembler.reset();
+      return;
     }
 
+    if (incomingAssembler.isComplete())
+    {
+      TransportMessage msg = incomingAssembler.buildMessage();
+      incomingAssembler.reset();
+
+      if (!msg.valid)
+      {
+        state.lastTransportStatus = "RX invalid message";
+        return;
+      }
+      if (MessageReceiver::isForThisDevice(msg, state))
+      {
+
+        MessageReceiver::storeToInbox(msg, state);
+        state.lastTransportStatus = "RX stored: " + msg.id;
+      }
+      else
+      {
+        state.lastTransportStatus = "RX skipped";
+      }
+    }
+    TransportMessage msg = incomingAssembler.buildMessage();
     return;
   }
 
@@ -60,11 +88,10 @@ void processIncomingLine(const String &line)
 
   if (line.startsWith("STAT:"))
   {
+    app.setHeltecConnected(true);
 
     int rssiPos = line.indexOf("RSSI:");
     int snrPos = line.indexOf("SNR:");
-
-    app.setRadioStatus(true, String(rssiPos), String(snrPos));
 
     if (rssiPos >= 0)
     {
@@ -85,7 +112,6 @@ void processIncomingLine(const String &line)
     return;
   }
 }
-
 void setup()
 {
   Serial.begin(115200);
@@ -99,7 +125,7 @@ void setup()
   if (SD.begin(chipSelect))
   {
     Serial.print("SD init OK on CS ");
-    Serial.println(chipSelect);
+    // Serial.println(chipSelect);
 
     File f = SD.open("/test.txt", FILE_WRITE);
     if (f)
@@ -120,6 +146,9 @@ void setup()
 
   delay(2000);
   app.begin();
+  delay(1000);
+
+  uart.requestStatus();
 }
 
 void loop()
@@ -127,18 +156,21 @@ void loop()
   KeyEvent key = keyboard.read();
   app.handleKey(key);
 
-  uart.poll();
-
-  while (uart.hasLine())
-  {
-    processIncomingLine(uart.popLine());
-  }
-
   if (millis() - lastStatusRequestMs >= STATUS_INTERVAL_MS)
   {
-    Serial.println("[APP] Requesting status update...");
     lastStatusRequestMs = millis();
     uart.requestStatus();
   }
+
+  while (true)
+  {
+    uart.poll();
+
+    if (!uart.hasLine())
+      break;
+
+    processIncomingLine(uart.popLine());
+  }
+
   delay(30);
 }

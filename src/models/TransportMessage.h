@@ -2,16 +2,14 @@
 #include <Arduino.h>
 #include "models/Messages.h"
 
-struct IncomingMessage
+struct TransportMessage
 {
     String id;
     String from;
     String to;
     TargetType targetType = TARGET_DEVICE;
-
-    bool useEncryption = false;
     bool includeGps = false;
-
+    bool useEncryption = false;
     String text;
     bool valid = false;
 };

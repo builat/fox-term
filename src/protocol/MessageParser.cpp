@@ -15,10 +15,9 @@ String MessageParser::getField(const String &payload, const String &key)
     return payload.substring(start, end);
 }
 
-IncomingMessage MessageParser::parse(const String &payload)
+TransportMessage MessageParser::parse(const String &payload)
 {
-    IncomingMessage msg;
-
+    TransportMessage msg;
     msg.id = getField(payload, "id");
     msg.from = getField(payload, "from");
     msg.to = getField(payload, "to");
@@ -30,11 +29,11 @@ IncomingMessage MessageParser::parse(const String &payload)
     msg.includeGps = (getField(payload, "gps") == "1");
 
     msg.text = getField(payload, "text");
-
-    msg.valid = msg.id.length() > 0 &&
-                msg.from.length() > 0 &&
-                msg.to.length() > 0 &&
-                msg.text.length() > 0;
+    msg.valid =
+        msg.id.length() > 0 &&
+        msg.from.length() > 0 &&
+        msg.to.length() > 0 &&
+        msg.text.length() > 0;
 
     return msg;
 }

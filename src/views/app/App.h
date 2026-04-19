@@ -29,6 +29,7 @@ public:
 
     void begin();
     void handleKey(const KeyEvent &key);
+    void setHeltecConnected(bool connected);
     void setRadioStatus(bool connected, const String &rssi, const String &snr);
     void switchTo(ViewId id);
     Screen &getScreen();

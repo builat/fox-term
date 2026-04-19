@@ -1,6 +1,10 @@
 #pragma once
 #include <Arduino.h>
 
+/*
+ * DEPRICATED - see TransportMessage.h
+ */
+
 enum TargetType
 {
     TARGET_DEVICE,
@@ -14,21 +18,6 @@ enum MessageStatus
     MSG_SENDING,
     MSG_SENT,
     MSG_FAILED
-};
-
-struct OutgoingMessage
-{
-    String id;
-    String from;
-    String to;
-    TargetType targetType = TARGET_DEVICE;
-
-    bool useEncryption = false;
-    bool includeGps = true;
-
-    String text;
-    String createdAt;
-    MessageStatus status = MSG_DRAFT;
 };
 
 inline String targetTypeToString(TargetType t)
@@ -54,3 +43,22 @@ inline String statusToString(MessageStatus s)
         return "unknown";
     }
 }
+
+enum ChunkType
+{
+    CHUNK_HDR,
+    CHUNK_GPS,
+    CHUNK_ENC,
+    CHUNK_TXT,
+    CHUNK_END,
+    CHUNK_UNKNOWN
+};
+
+struct MessageChunk
+{
+    String messageId;
+    ChunkType type = CHUNK_UNKNOWN;
+    String meta;
+    String payload;
+    bool valid = false;
+};

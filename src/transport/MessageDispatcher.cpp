@@ -1,27 +1,22 @@
 #include "transport/MessageDispatcher.h"
 #include "uart/UartLink.h"
+#include "protocol/MessageChunkCodec.h"
 
 MessageDispatcher::MessageDispatcher(UartLink &u) : uart(u)
 {
 }
 
-String MessageDispatcher::encode(const OutgoingMessage &msg) const
+bool MessageDispatcher::dispatch(const TransportMessage &msg)
 {
-    String line = "SEND:";
-    line += "id=" + msg.id;
-    line += "|from=" + msg.from;
-    line += "|to=" + msg.to;
-    line += "|target=" + targetTypeToString(msg.targetType);
-    line += "|enc=" + String(msg.useEncryption ? "1" : "0");
-    line += "|gps=" + String(msg.includeGps ? "1" : "0");
-    line += "|text=" + msg.text;
+    String chunks[32];
+    int count = MessageChunkCodec::encode(msg, chunks, 32);
+    if (count <= 0)
+        return false;
 
-    return line;
-}
+    for (int i = 0; i < count; i++)
+    {
+        uart.sendLine(chunks[i]);
+    }
 
-bool MessageDispatcher::dispatch(OutgoingMessage &msg)
-{
-    msg.status = MSG_SENDING;
-    uart.sendLine(encode(msg));
     return true;
 }

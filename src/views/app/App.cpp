@@ -6,8 +6,8 @@
 #include "views/settings_edit/SettingsEdit.h"
 #include "views/compose_message/ComposeMessage.h"
 
-App::App(Screen &s, UartLink &u)
-    : screen(s), uart(u), dispatcher(u)
+App::App(Screen &s, UartLink &u, SdStorage &sd)
+    : screen(s), uart(u), storage(sd), dispatcher(u)
 {
     homeView = new HomeView();
     messagesView = new MessagesView();
@@ -43,6 +43,10 @@ void App::begin()
 
     state.lastTransportStatus = "IDLE";
     state.nextMessageSeq = 1;
+
+    // Override defaults with values saved on the SD card (if available).
+    if (storage.readConfig(state))
+        state.draftMessage.from = state.deviceName;
 
     switchTo(VIEW_HOME);
 }
@@ -122,4 +126,9 @@ MessageDispatcher &App::getDispatcher()
 void App::setHeltecConnected(bool connected)
 {
     setRadioStatus(connected, state.lastRssi, state.lastSnr);
+}
+
+SdStorage &App::getStorage()
+{
+    return storage;
 }

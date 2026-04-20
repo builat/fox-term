@@ -41,7 +41,6 @@ private:
   int cursorY;
   bool cursorVisible;
   unsigned long lastCursorToggle;
-  unsigned long lastStatusUpdate;
   bool lastHeltecConnected;
   bool heltecConnected;
 };

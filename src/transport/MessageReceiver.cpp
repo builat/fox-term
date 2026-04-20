@@ -4,13 +4,7 @@
 
 bool MessageReceiver::isForThisDevice(const TransportMessage &msg, DeviceState &state)
 {
-    if (!msg.valid)
-        return false;
-    if (msg.to == state.deviceName)
-        return true;
-    if (msg.to == state.groupName)
-        return true;
-    return false;
+    return msg.valid && (msg.to == state.deviceName || msg.to == state.groupName);
 }
 
 void MessageReceiver::storeToInbox(const TransportMessage &msg, DeviceState &state)

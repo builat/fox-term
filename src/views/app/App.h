@@ -5,6 +5,7 @@
 #include "uart/UartLink.h"
 #include "views/compose_message/ComposeMessage.h"
 #include "transport/MessageDispatcher.h"
+#include "storage/SdStorage.h"
 
 class HomeView;
 class MessagesView;
@@ -25,7 +26,7 @@ enum ViewId
 class App
 {
 public:
-    App(Screen &screen, UartLink &uart);
+    App(Screen &screen, UartLink &uart, SdStorage &storage);
 
     void begin();
     void handleKey(const KeyEvent &key);
@@ -36,10 +37,12 @@ public:
     UartLink &getUart();
     DeviceState &getState();
     MessageDispatcher &getDispatcher();
+    SdStorage &getStorage();
 
 private:
     Screen &screen;
     UartLink &uart;
+    SdStorage &storage;
     MessageDispatcher dispatcher;
     DeviceState state;
     HomeView *homeView;

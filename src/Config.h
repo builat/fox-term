@@ -23,3 +23,6 @@ static const int CHAR_STEP = 5;
 static const unsigned long CURSOR_BLINK_MS = 400;
 static const int CURSOR_WIDTH = 5;
 static const int CURSOR_HEIGHT = 8;
+
+const unsigned long STATUS_INTERVAL_MS = 60 * 1000;
+const int SD_CS_PIN = 53;

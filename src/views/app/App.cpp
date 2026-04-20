@@ -121,6 +121,5 @@ MessageDispatcher &App::getDispatcher()
 }
 void App::setHeltecConnected(bool connected)
 {
-    state.heltecConnected = connected;
-    screen.setRadioStatus(connected, state.lastRssi, state.lastSnr);
+    setRadioStatus(connected, state.lastRssi, state.lastSnr);
 }

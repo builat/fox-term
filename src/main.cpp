@@ -61,7 +61,6 @@ void processIncomingLine(const String &line)
       }
       if (MessageReceiver::isForThisDevice(msg, state))
       {
-
         MessageReceiver::storeToInbox(msg, state);
         state.lastTransportStatus = "RX stored: " + msg.id;
       }
@@ -70,7 +69,6 @@ void processIncomingLine(const String &line)
         state.lastTransportStatus = "RX skipped";
       }
     }
-    TransportMessage msg = incomingAssembler.buildMessage();
     return;
   }
 

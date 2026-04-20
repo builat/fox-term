@@ -49,6 +49,8 @@ void Screen::drawCursor()
 
 void Screen::eraseCursor()
 {
+  if (!cursorVisible)
+    return;
   tft.fillRect(cursorX, cursorY, CURSOR_WIDTH, CURSOR_HEIGHT, BLACK);
   cursorVisible = false;
 }
@@ -65,23 +67,11 @@ void Screen::resetCursorBlink()
 
 void Screen::updateCursor()
 {
-
   unsigned long now = millis();
-  if (now - lastStatusUpdate >= 1000)
-  {
-    lastStatusUpdate = now;
-  }
   if (now - lastCursorToggle >= CURSOR_BLINK_MS)
   {
     lastCursorToggle = now;
-    if (cursorVisible)
-    {
-      eraseCursor();
-    }
-    else
-    {
-      drawCursor();
-    }
+    cursorVisible ? eraseCursor() : drawCursor();
   }
 }
 
@@ -97,11 +87,7 @@ void Screen::clear()
 
 void Screen::newLine()
 {
-  if (cursorVisible)
-  {
-    eraseCursor();
-  }
-
+  eraseCursor();
   cursorX = LEFT_MARGIN;
   cursorY += LINE_HEIGHT;
 
@@ -124,11 +110,7 @@ void Screen::printDefaultColorLine(const String &text)
 
 void Screen::printText(const String &text, uint16_t color)
 {
-  if (cursorVisible)
-  {
-    eraseCursor();
-  }
-
+  eraseCursor();
   tft.setTextColor(color);
   tft.setCursor(cursorX, cursorY);
   tft.print(text);
@@ -140,11 +122,7 @@ void Screen::printText(const String &text, uint16_t color)
 
 void Screen::printLine(const String &text, uint16_t color)
 {
-  if (cursorVisible)
-  {
-    eraseCursor();
-  }
-
+  eraseCursor();
   tft.setTextColor(color);
   tft.setCursor(LEFT_MARGIN, cursorY);
   tft.print(text);
@@ -153,11 +131,7 @@ void Screen::printLine(const String &text, uint16_t color)
 
 void Screen::printPrompt()
 {
-  if (cursorVisible)
-  {
-    eraseCursor();
-  }
-
+  eraseCursor();
   tft.setTextColor(GREEN);
   tft.setCursor(cursorX, cursorY);
   tft.print("> ");
@@ -168,11 +142,7 @@ void Screen::printPrompt()
 
 void Screen::printChar(char c, uint16_t color)
 {
-  if (cursorVisible)
-  {
-    eraseCursor();
-  }
-
+  eraseCursor();
   tft.setTextColor(color);
   tft.setCursor(cursorX, cursorY);
   tft.print(c);

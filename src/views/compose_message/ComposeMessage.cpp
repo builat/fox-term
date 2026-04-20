@@ -2,7 +2,6 @@
 #include "views/app/App.h"
 #include "Config.h"
 #include "utils/IdGenerator.h"
-#include "protocol/MessageChunkCodec.h"
 void ComposeMessageView::onEnter(App &app)
 {
     selectedField = COMPOSE_TO;
@@ -186,28 +185,23 @@ void ComposeMessageView::onKey(App &app, const KeyEvent &key)
 
     if (key.type == KEY_ENTER || key.type == KEY_SELECT || key.type == KEY_RIGHT)
     {
-        if (selectedField == COMPOSE_SEND)
+        switch (selectedField)
         {
+        case COMPOSE_SEND:
             handleSend(app);
             return;
-        }
-
-        if (selectedField == COMPOSE_CANCEL)
-        {
+        case COMPOSE_CANCEL:
             handleCancel(app);
             return;
-        }
-
-        if (selectedField == COMPOSE_TARGET_TYPE ||
-            selectedField == COMPOSE_ENCRYPTION ||
-            selectedField == COMPOSE_GPS_TAG)
-        {
+        case COMPOSE_TARGET_TYPE:
+        case COMPOSE_ENCRYPTION:
+        case COMPOSE_GPS_TAG:
             toggleCurrentField(app);
             render(app);
             return;
+        default:
+            moveDown();
+            render(app);
         }
-
-        moveDown();
-        render(app);
     }
 }

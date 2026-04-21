@@ -1,5 +1,21 @@
 #include "protocol/MessageAssembler.h"
 
+// ---------------------------------------------------------------------------
+// MessageAssembler
+//
+// Stateful machine that collects MSG chunks belonging to the same message ID
+// and reconstructs the original TransportMessage once all pieces have arrived.
+//
+// State flags track which chunk types have been received:
+//   gotHdr, gotGps, gotEnc, gotEnd  — one-shot chunks (expected exactly once)
+//   textPartReceived[]              — per-index flags for TXT chunks
+//
+// The assembler accepts chunks arriving in any order.  If a chunk for a
+// different message ID arrives mid-stream, the current state is discarded
+// and the new message takes over (handles the case where a previous
+// transmission was partially lost).
+// ---------------------------------------------------------------------------
+
 void MessageAssembler::reset()
 {
     currentId = "";
@@ -22,12 +38,15 @@ void MessageAssembler::reset()
     gotEnd = false;
 }
 
+// Parse the semicolon-separated key=value list carried by the HDR chunk.
+// Example payload: "from=alice;to=bob;mode=group"
 void MessageAssembler::parseHeader(const String &payload)
 {
     int fromPos = payload.indexOf("from=");
     int toPos = payload.indexOf("to=");
     int modePos = payload.indexOf("mode=");
 
+    // For each key, find the end of its value (next semicolon or end of string).
     if (fromPos >= 0)
     {
         int end = payload.indexOf(';', fromPos);
@@ -59,10 +78,13 @@ bool MessageAssembler::addChunk(const MessageChunk &chunk)
     if (!chunk.valid)
         return false;
 
+    // First chunk seen: record the message ID we are assembling.
     if (currentId.length() == 0)
     {
         currentId = chunk.messageId;
     }
+    // Different ID: a new message started before the previous one completed.
+    // Discard the partial state and start fresh with the new ID.
     else if (chunk.messageId != currentId)
     {
         reset();
@@ -77,17 +99,22 @@ bool MessageAssembler::addChunk(const MessageChunk &chunk)
         break;
 
     case CHUNK_GPS:
+        // Payload is "1" (include GPS tag) or "0" (omit).
         includeGps = (chunk.payload == "1");
         gotGps = true;
         break;
 
     case CHUNK_ENC:
+        // Payload is "1" (encrypted) or "0" (plaintext).
         useEncryption = (chunk.payload == "1");
         gotEnc = true;
         break;
 
     case CHUNK_TXT:
     {
+        // Meta field is "<zero-based-index>/<total>", e.g. "0/3".
+        // We store each part by its index so they can be reassembled in order
+        // regardless of the arrival sequence.
         int slash = chunk.meta.indexOf('/');
         if (slash < 0)
             return false;
@@ -117,14 +144,18 @@ bool MessageAssembler::addChunk(const MessageChunk &chunk)
     return true;
 }
 
+// Returns true only when every expected chunk has been received.
 bool MessageAssembler::isComplete() const
 {
+    // All four mandatory one-shot chunks must be present.
     if (!gotHdr || !gotGps || !gotEnc || !gotEnd)
         return false;
 
+    // At least one TXT chunk must have been announced.
     if (expectedTextParts <= 0)
         return false;
 
+    // Every individual TXT slot must be filled (no gaps).
     for (int i = 0; i < expectedTextParts; i++)
     {
         if (!textPartReceived[i])
@@ -134,6 +165,8 @@ bool MessageAssembler::isComplete() const
     return true;
 }
 
+// Concatenate all TXT parts in index order and assemble the final message.
+// Should only be called after isComplete() returns true.
 TransportMessage MessageAssembler::buildMessage() const
 {
     TransportMessage msg;
@@ -145,10 +178,9 @@ TransportMessage MessageAssembler::buildMessage() const
     msg.useEncryption = useEncryption;
 
     for (int i = 0; i < expectedTextParts; i++)
-    {
         msg.text += textParts[i];
-    }
 
+    // Mark the message valid only if all required fields are non-empty.
     msg.valid = isComplete() &&
                 msg.id.length() > 0 &&
                 msg.from.length() > 0 &&

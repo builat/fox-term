@@ -98,10 +98,8 @@ int MessageChunkCodec::encode(const TransportMessage &msg, String outChunks[], i
         int start = i * TEXT_CHUNK_SIZE;
         String part = text.substring(start, start + TEXT_CHUNK_SIZE);
 
-        // Meta field encodes "<zero-based-index>/<total>" so the receiver
-        // can detect gaps and reconstruct the order.
         outChunks[index++] =
-            "MSG|" + msg.id + "|TXT|" + String(i) + "/" + String(totalChunks) + "|" + part;
+            "MSG|" + msg.id + "|TXT|" + String(i + 1) + "/" + String(totalChunks) + "|" + part;
     }
 
     // END marks the final boundary of a transmission for this message ID.
